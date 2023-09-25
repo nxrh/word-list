@@ -1,0 +1,103 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
+    directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+// user related
+model WordList_User {
+    id            String                  @id @default(cuid())
+    name          String?
+    email         String                  @unique
+    emailVerified DateTime?
+    image         String?
+    words         WordList_UsersOnWords[]
+    accounts      WordList_Account[]
+    Session       WordList_Session[]
+}
+
+model WordList_Account {
+    id                 String        @id @default(cuid())
+    user               WordList_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId             String        @map("user_id")
+    type               String
+    provider           String
+    providerAccountId  String        @map("provider_account_id")
+    refresh_token      String?
+    access_token       String?
+    expires_at         Int?
+    token_type         String?
+    scope              String?
+    id_token           String?
+    session_state      String?
+    oauth_token_secret String?
+    oauth_token        String?
+
+    @@unique([provider, providerAccountId])
+}
+
+model WordList_Session {
+    id           String        @id @default(cuid())
+    sessionToken String        @unique @map("session_token")
+    user         WordList_User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId       String        @map("user_id")
+    expires      DateTime
+}
+
+model WordList_VerificationToken {
+    id         Int      @id @default(autoincrement())
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}
+
+// word
+model WordList_Word {
+    id        String                  @id @default(cuid())
+    word      String                  @unique
+    phonetic  String?
+    phonetics WordList_Phonetics[]
+    meanings  WordList_Meaning[]
+    users     WordList_UsersOnWords[]
+}
+
+model WordList_Phonetics {
+    id     String         @id @default(cuid())
+    text   String
+    audio  String
+    word   WordList_Word? @relation(fields: [wordId], references: [id])
+    wordId String?
+}
+
+model WordList_Meaning {
+    id           String                @id @default(cuid())
+    partOfSpeech String
+    definitions  WordList_Definition[]
+    word         WordList_Word?        @relation(fields: [wordId], references: [id])
+    wordId       String?
+}
+
+model WordList_Definition {
+    id         String            @id @default(cuid())
+    definition String
+    examples   String[]
+    meaning    WordList_Meaning? @relation(fields: [meaningId], references: [id])
+    meaningId  String?
+}
+
+// relation table
+model WordList_UsersOnWords {
+    word    WordList_Word @relation(fields: [wordId], references: [id])
+    wordId  String
+    user    WordList_User @relation(fields: [userId], references: [id])
+    userId  String
+    addedAt DateTime      @default(now())
+
+    @@id([wordId, userId])
+}
